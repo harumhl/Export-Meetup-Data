@@ -10,15 +10,16 @@ import os
 # Variables for the script
 cookie_value = 'your_cookie_here'
 meetup_url = 'https://www.meetup.com/your-meetup-url-here'
-api_endpoint_filter = '/desired-api-endpoint/'  # Filter by API endpoint
-request_field = 'your_field_name'  # Field to check in the request payload
-request_value = 'desired_string_value'  # The value of the field you want to match
-output_file = 'meetup_data.json'
+driver_service = Service('path_to_chromedriver')  # Set this to the path of your chromedriver
+
+api_endpoint_filter = '/gql2'  # Filter by API endpoint
+request_field = 'operationName'  # Field to check in the request payload
+request_value = 'getPastGroupEvents'  # The value of the field you want to match
+output_file = 'events.json'
 
 # Setup Selenium with Chrome in headless mode
 options = Options()
 options.headless = True
-driver_service = Service('path_to_chromedriver')  # Set this to the path of your chromedriver
 driver = webdriver.Chrome(service=driver_service, options=options)
 
 # Add cookie to the session
