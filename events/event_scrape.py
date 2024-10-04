@@ -74,6 +74,13 @@ def infinite_scroll():
         if new_height > last_height:
             last_height = new_height  # Update the last height
             time_without_new_content = 0  # Reset the timer
+
+            # Collect network logs after new content has loaded
+            filtered_network_data = capture_network_logs()
+
+            # Save new network logs to the file
+            update_json_file(filtered_network_data)
+
         else:
             # Increment the timer for no new content
             time_without_new_content += SCROLL_PAUSE_TIME
@@ -117,10 +124,18 @@ def capture_network_logs():
 def update_json_file(new_data):
     # Check if the output file exists
     if os.path.exists(output_file):
-        with open(output_file, 'r') as f:
-            existing_data = json.load(f)
+        try:
+            with open(output_file, 'r') as f:
+                existing_data = json.load(f)
+        except:
+            print(f'Make sure the {output_file} is in correct JSON format')
+            exit(1)
     else:
         existing_data = []
+
+    if not isinstance(existing_data, list):
+        print(f'Make sure the {output_file} is a list of JSON')
+        exit(1)
 
     updated_data = existing_data
 
@@ -137,6 +152,9 @@ def update_json_file(new_data):
         json.dump(updated_data, f, indent=4)
 
 if __name__ == "__main__":
+    # Just making sure the output file is valid
+    update_json_file({})
+
     # Setup Selenium with Chrome in headless mode
     options = Options()
     options.set_capability('goog:loggingPrefs', {'performance': 'ALL'})
@@ -147,13 +165,5 @@ if __name__ == "__main__":
 
         driver.get(meetup_event_url)
         infinite_scroll()
-
-        # Collect network logs and filter responses by endpoint and request field
-        filtered_network_data = capture_network_logs()
-
-        # Save responses to file
-        update_json_file(filtered_network_data)
-        
-        print(f"Collected {len(filtered_network_data)} new API responses.")
     finally:
         driver.quit()
