@@ -10,3 +10,16 @@ I'm using ChatGPT to help me here so the coding standards may not be so great.
 
 IF YOU DECIDE TO USE THIS, DON'T BE A CREEP AND SCRAPE DATA THAT YOU PROBABLY SHOULD NOT GATHER SO MUCH.
 I DO NOT APPROVE SUCH USAGE.
+
+# How to Use
+
+1. Run `pip install -r requirements.txt`
+1. Create `.env` file under `events` folder
+1. Add
+    ```
+    USERNAME=<YOUR_MEETUP_USERNAME>
+    PASSWORD=<YOUR_MEETUP_PASSWORD>
+    MEETUP_URL=<YOUR_MEETUP_GROUP_HOME_URL>
+    ```
+1. Replace the values in `<...>`
+1. Run `python events/meetup_scrape.py`

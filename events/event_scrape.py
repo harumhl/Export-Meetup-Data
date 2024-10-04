@@ -11,12 +11,12 @@ from webdriver_manager.chrome import ChromeDriverManager
 import json
 import time
 import os
+from dotenv import load_dotenv
 
 # Variables for the script
-cookie_value = 'your_cookie_here'
-meetup_url = 'https://www.meetup.com/your-meetup-url-here'
-username = "your_username"  # Your Meetup email
-password = "your_password"  # Your Meetup password
+meetup_event_url = os.getenv('MEETUP_URL').rstrip('/') + '/events/?type=past'
+username = os.getenv('USERNAME')
+password = os.getenv('PASSWORD')
 
 api_endpoint_filter = '/gql2'  # Filter by API endpoint
 request_field = 'operationName'  # Field to check in the request payload
