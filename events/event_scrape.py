@@ -14,6 +14,7 @@ import os
 from dotenv import load_dotenv
 
 # Variables for the script
+load_dotenv()
 meetup_event_url = os.getenv('MEETUP_URL').rstrip('/') + '/events/?type=past'
 username = os.getenv('USERNAME')
 password = os.getenv('PASSWORD')
