@@ -50,20 +50,43 @@ def login():
     submit_button.click()
 
     # Wait for a bit to see the result (you can remove this if you don't need it)
-    time.sleep(5)
+    time.sleep(2)
 
 # Function to perform infinite scroll
 def infinite_scroll():
-    SCROLL_PAUSE_TIME = 2
+    SCROLL_PAUSE_TIME = 1
+    scroll_distance = 800  # Scroll by a fixed distance
+    backtrack_distance = 300  # Distance to backtrack if at the bottom
     last_height = driver.execute_script("return document.body.scrollHeight")
-    
+    time_without_new_content = 0  # Time without new content loaded
+
     while True:
-        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+        # Scroll down a little
+        driver.execute_script(f"window.scrollBy(0, {scroll_distance});")
+
+        # Wait for new data to load
         time.sleep(SCROLL_PAUSE_TIME)
+
+        # Get the new height after scrolling
         new_height = driver.execute_script("return document.body.scrollHeight")
-        if new_height == last_height:
-            break
-        last_height = new_height
+
+        # Check if the height has changed (new content loaded)
+        if new_height > last_height:
+            last_height = new_height  # Update the last height
+            time_without_new_content = 0  # Reset the timer
+        else:
+            # Increment the timer for no new content
+            time_without_new_content += SCROLL_PAUSE_TIME
+
+            # Check if we're at the bottom of the page
+            if driver.execute_script("return window.innerHeight + window.scrollY >= document.body.offsetHeight"):
+                # Backtrack if at the bottom
+                driver.execute_script(f"window.scrollBy(0, -{backtrack_distance});")
+                time.sleep(SCROLL_PAUSE_TIME)  # Wait for any content to load after backtracking
+
+            # If no new content has loaded for a certain duration, break the loop
+            if time_without_new_content >= 10:  # 10 seconds without new content
+                break
 
 # Function to capture and filter network logs by endpoint and request payload
 def capture_network_logs():
@@ -73,23 +96,26 @@ def capture_network_logs():
     for entry in logs:
         log_json = json.loads(entry['message'])
         if 'Network.requestWillBeSent' in log_json['message']['method']:
-            request_url = log_json['message']['params']['request']['url']
-            request_post_data = log_json['message']['params']['request'].get('postData', '')
+            params = log_json['message']['params']
+            if 'request' in params:
+                request_url = params['request']['url']
+                request_post_data = params['request'].get('postData', '')
 
-            # Filter by endpoint and request payload
-            if api_endpoint_filter in request_url and request_value in request_post_data:
-                request_id = log_json['message']['params']['requestId']
+                # Filter by endpoint and request payload
+                if api_endpoint_filter in request_url and request_value in request_post_data:
+                    request_id = params['requestId']
 
-                # Capture response if it matches criteria
-                response = driver.execute_cdp_cmd('Network.getResponseBody', {
-                    'requestId': request_id
-                })
-                filtered_responses.append(response)
+                    # Capture response if it matches criteria
+                    response = driver.execute_cdp_cmd('Network.getResponseBody', {
+                        'requestId': request_id
+                    })
+                    filtered_responses.append(response)
 
     return filtered_responses
 
 # Compare and update JSON file
 def update_json_file(new_data):
+    # Check if the output file exists
     if os.path.exists(output_file):
         with open(output_file, 'r') as f:
             existing_data = json.load(f)
@@ -99,21 +125,26 @@ def update_json_file(new_data):
     updated_data = existing_data
 
     for item in new_data:
-        if item not in existing_data:
-            updated_data.append(item)
+        # Parse the 'body' field from the item
+        body_data = json.loads(item['body'])  # Convert the body string to a JSON object
 
+        # Check if the parsed data already exists in existing_data
+        if body_data not in existing_data:
+            updated_data.append(body_data)  # Append the parsed data if it doesn't exist
+
+    # Write the updated data back to the JSON file
     with open(output_file, 'w') as f:
         json.dump(updated_data, f, indent=4)
 
 if __name__ == "__main__":
     # Setup Selenium with Chrome in headless mode
-    driver_service = Service(ChromeDriverManager().install())
     options = Options()
-    driver = webdriver.Chrome(service=driver_service, options=options)
-
-    login()
+    options.set_capability('goog:loggingPrefs', {'performance': 'ALL'})
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 
     try:
+        login()
+
         driver.get(meetup_event_url)
         infinite_scroll()
 
