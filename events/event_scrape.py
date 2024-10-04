@@ -3,6 +3,11 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from webdriver_manager.chrome import ChromeDriverManager
 import json
 import time
 import os
@@ -10,21 +15,42 @@ import os
 # Variables for the script
 cookie_value = 'your_cookie_here'
 meetup_url = 'https://www.meetup.com/your-meetup-url-here'
-driver_service = Service('path_to_chromedriver')  # Set this to the path of your chromedriver
+username = "your_username"  # Your Meetup email
+password = "your_password"  # Your Meetup password
 
 api_endpoint_filter = '/gql2'  # Filter by API endpoint
 request_field = 'operationName'  # Field to check in the request payload
 request_value = 'getPastGroupEvents'  # The value of the field you want to match
 output_file = 'events.json'
 
-# Setup Selenium with Chrome in headless mode
-options = Options()
-options.headless = True
-driver = webdriver.Chrome(service=driver_service, options=options)
+def login():
+    # Step 1: Navigate to Meetup URL
+    driver.get("https://www.meetup.com")
 
-# Add cookie to the session
-driver.get(meetup_url)
-driver.add_cookie({'name': 'cookie_name', 'value': cookie_value, 'domain': '.meetup.com'})
+    # Step 2: Click the login button using the provided selector
+    login_button = WebDriverWait(driver, 10).until(
+        EC.element_to_be_clickable((By.ID, "login-link"))
+    )
+    login_button.click()
+
+    # Step 3: Wait for the login page to load and enter username and password
+    email_field = WebDriverWait(driver, 10).until(
+        EC.visibility_of_element_located((By.NAME, "email"))
+    )
+    password_field = WebDriverWait(driver, 10).until(
+        EC.visibility_of_element_located((By.NAME, "current-password"))
+    )
+
+    # Enter email and password
+    email_field.send_keys(username)
+    password_field.send_keys(password)
+
+    # Step 4: Click the login button
+    submit_button = driver.find_element(By.XPATH, "//button[@data-testid='submit']")
+    submit_button.click()
+
+    # Wait for a bit to see the result (you can remove this if you don't need it)
+    time.sleep(5)
 
 # Function to perform infinite scroll
 def infinite_scroll():
@@ -79,17 +105,24 @@ def update_json_file(new_data):
     with open(output_file, 'w') as f:
         json.dump(updated_data, f, indent=4)
 
-# Main execution
-try:
-    driver.get(meetup_url)
-    infinite_scroll()
+if __name__ == "__main__":
+    # Setup Selenium with Chrome in headless mode
+    driver_service = Service(ChromeDriverManager().install())
+    options = Options()
+    driver = webdriver.Chrome(service=driver_service, options=options)
 
-    # Collect network logs and filter responses by endpoint and request field
-    filtered_network_data = capture_network_logs()
+    login()
 
-    # Save responses to file
-    update_json_file(filtered_network_data)
-    
-    print(f"Collected {len(filtered_network_data)} new API responses.")
-finally:
-    driver.quit()
+    try:
+        driver.get(meetup_event_url)
+        infinite_scroll()
+
+        # Collect network logs and filter responses by endpoint and request field
+        filtered_network_data = capture_network_logs()
+
+        # Save responses to file
+        update_json_file(filtered_network_data)
+        
+        print(f"Collected {len(filtered_network_data)} new API responses.")
+    finally:
+        driver.quit()
