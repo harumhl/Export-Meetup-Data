@@ -99,6 +99,7 @@ def download_album_photos():
         except:
             # TODO fix this which could be related to the first album failing
             print(f'FAILED TO GRAB "event_name_with_date" at album_index = {album_index}')
+            continue
 
         date_match = re.search(r'\((\w+ \d{1,2}, \d{4})\)', event_name_with_date)
         if date_match:
