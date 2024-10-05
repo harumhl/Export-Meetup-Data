@@ -9,6 +9,8 @@ from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver import ActionChains
+from selenium.webdriver.common.keys import Keys
 import requests
 import re
 from datetime import datetime  # Import datetime
@@ -123,16 +125,16 @@ def download_album_photos():
     while True:
         print(f'Trying album_index = {album_index}')
 
+        # Scroll to the right album
         albums = driver.find_element(By.CSS_SELECTOR, '#submain > div > div.grid.grid-cols-1.gap-4.sm\\:grid-cols-2.lg\\:grid-cols-3').find_elements(By.XPATH, './a')
-
         while album_index >= len(albums):
             scroll()
             albums = driver.find_element(By.CSS_SELECTOR, '#submain > div > div.grid.grid-cols-1.gap-4.sm\\:grid-cols-2.lg\\:grid-cols-3').find_elements(By.XPATH, './a')
-
         album = albums[album_index]
 
-        # Click on the album
-        album.click()
+        # Open the album in a new tab
+        ActionChains(driver).key_down(Keys.COMMAND).click(album).key_up(Keys.COMMAND).perform() # ActionChains(driver).key_down(Keys.CONTROL).click(link).key_up(Keys.CONTROL).perform() # for Windows
+        driver.switch_to.window(driver.window_handles[-1])
         time.sleep(3)
 
         # Get album name aka event name plus date for file name
@@ -146,6 +148,7 @@ def download_album_photos():
             continue
 
         date_match = re.search(r'\((\w+ \d{1,2}, \d{4})\)', event_name_with_date)
+        album_name = event_name_with_date
         if date_match:
             date_str = date_match.group(1)  # Get the matched date string
     
@@ -155,7 +158,6 @@ def download_album_photos():
             # Remove the date from the event_name_with_date
             event_name_without_date = event_name_with_date.replace(date_match.group(0), '').strip()
 
-            # Create the album name
             album_name = f"{formatted_date}  {event_name_without_date}"  # e.g., "2024.09.14  Event_Name"
 
         # Click on the first photo
@@ -183,7 +185,7 @@ def download_album_photos():
                 # Open the photo in a new tab to trigger download
                 download_button = driver.find_element(By.ID, 'download-photo')
                 download_button.click()  # This will open the photo in a new tab
-                driver.switch_to.window(driver.window_handles[1])  # Switch to the new tab
+                driver.switch_to.window(driver.window_handles[-1])  # Switch to the new tab
                 
                 # Wait for the photo to load
                 time.sleep(1)
@@ -198,7 +200,7 @@ def download_album_photos():
                 
                 # Close the new tab after downloading
                 driver.close()
-                driver.switch_to.window(driver.window_handles[0])  # Return to the album tab
+                driver.switch_to.window(driver.window_handles[-1])  # Return to the album tab
             
             # Increment photo index for next photo
             photo_index += 1
@@ -208,16 +210,14 @@ def download_album_photos():
             photo_counter = driver.find_element(By.CSS_SELECTOR, 
                 "#modal > div > div.w-full.rounded-none.bg-gray7.xs\\:p-0.a1a66qgy.hidden.relative.sm\\:block.bg-white.rounded-lg.shadow-lg.z-50.max-h-screen.overflow-y-auto.pl-12.pr-10.pt-9.pb-8.md\\:max-w-prose > div > div > div.flex.h-full.w-full.flex-col > div.absolute.bottom-0.flex.w-full.items-center.bg-gray7.sm\\:relative.d1o5tode > div > div:nth-child(2) > span"
             ).text  # Get the text of the element
-            if photo_index > 2 and  photo_counter.split('/')[0] == photo_counter.split('/')[1]:
+            if photo_counter == '1/1' or (photo_index > 2 and photo_counter.split('/')[0] == photo_counter.split('/')[1]):
                 break  # We are at like 90/90 so the last one
             next_photo_button.click()
             time.sleep(2)  # Wait for the next photo to load
         
-        # Exit the photo viewer and go back to albums
-        exit_photo_modal_button = driver.find_element(By.ID, 'close-overlay')
-        exit_photo_modal_button.click()
-        time.sleep(2)
-        driver.back()  # Go back to the album list
+        # Close the album tab and go back to the albums tab
+        driver.close()
+        driver.switch_to.window(driver.window_handles[-1])  # Return to the albums tab
         time.sleep(3)
         album_index += 1
 
