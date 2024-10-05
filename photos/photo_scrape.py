@@ -82,17 +82,24 @@ def download_album_photos():
     driver.get(meetup_event_url)
     
     time.sleep(3)  # Adjust this depending on the page load time
-    
-    # Find all the albums on the page
-    albums = driver.find_elements(By.CSS_SELECTOR, '#submain > div > div.grid.grid-cols-1.gap-4.sm\\:grid-cols-2.lg\\:grid-cols-3')
-    
-    for album in albums:
+
+    album_index = 1 # TODO the first album at i=0 is different??? Handle that
+    while True:
+        albums = driver.find_element(By.CSS_SELECTOR, '#submain > div > div.grid.grid-cols-1.gap-4.sm\\:grid-cols-2.lg\\:grid-cols-3').find_elements(By.XPATH, './a')
+        album = albums[album_index]
+
         # Click on the album
         album.click()
         time.sleep(3)
 
         # Get album name aka event name plus date for file name
-        event_name_with_date = driver.find_element(By.CSS_SELECTOR, '#submain > div > div > div.flex.flex-col.space-y-6 > a > h1').text  # Get the album name from the h1 element
+        event_name_with_date = None
+        try:
+            event_name_with_date = driver.find_element(By.CSS_SELECTOR, '#submain > div > div > div.flex.flex-col.space-y-6 > a > h1').text  # Get the album name from the h1 element
+        except:
+            # TODO fix this which could be related to the first album failing
+            print(f'FAILED TO GRAB "event_name_with_date" at album_index = {album_index}')
+
         date_match = re.search(r'\((\w+ \d{1,2}, \d{4})\)', event_name_with_date)
         if date_match:
             date_str = date_match.group(1)  # Get the matched date string
@@ -158,6 +165,8 @@ def download_album_photos():
         time.sleep(2)
         driver.back()  # Go back to the album list
         time.sleep(3)
+        print(f'album_index = {album_index}')
+        album_index += 1
 
 login()
 download_album_photos()
