@@ -78,14 +78,57 @@ def check_file_exists(file_name):
     else:
         return False
 
+def scroll():
+    SCROLL_PAUSE_TIME = 1
+    scroll_distance = 800  # Scroll by a fixed distance
+    backtrack_distance = 300  # Distance to backtrack if at the bottom
+    last_height = driver.execute_script("return document.body.scrollHeight")
+    time_without_new_content = 0  # Time without new content loaded
+
+    while True:
+        # Scroll down a little
+        driver.execute_script(f"window.scrollBy(0, {scroll_distance});")
+
+        # Wait for new data to load
+        time.sleep(SCROLL_PAUSE_TIME)
+
+        # Get the new height after scrolling
+        new_height = driver.execute_script("return document.body.scrollHeight")
+
+        # Check if the height has changed (new content loaded)
+        if new_height > last_height:
+            time.sleep(3)  # Wait for the new albums to load
+            return
+        else:
+            # Increment the timer for no new content
+            time_without_new_content += SCROLL_PAUSE_TIME
+
+            # Check if we're at the bottom of the page
+            if driver.execute_script("return window.innerHeight + window.scrollY >= document.body.offsetHeight"):
+                # Backtrack if at the bottom
+                driver.execute_script(f"window.scrollBy(0, -{backtrack_distance});")
+                time.sleep(SCROLL_PAUSE_TIME)  # Wait for any content to load after backtracking
+
+            # If no new content has loaded for a certain duration, break the loop
+            if time_without_new_content >= 10:  # 10 seconds without new content
+                break
+
+
 def download_album_photos():
     driver.get(meetup_event_url)
     
     time.sleep(3)  # Adjust this depending on the page load time
 
-    album_index = 1 # TODO the first album at i=0 is different??? Handle that
+    album_index = 1 # TODO the first album at i=0 is different??? Handle that. i=12,13,14 failed too
     while True:
+        print(f'Trying album_index = {album_index}')
+
         albums = driver.find_element(By.CSS_SELECTOR, '#submain > div > div.grid.grid-cols-1.gap-4.sm\\:grid-cols-2.lg\\:grid-cols-3').find_elements(By.XPATH, './a')
+
+        while album_index >= len(albums):
+            scroll()
+            albums = driver.find_element(By.CSS_SELECTOR, '#submain > div > div.grid.grid-cols-1.gap-4.sm\\:grid-cols-2.lg\\:grid-cols-3').find_elements(By.XPATH, './a')
+
         album = albums[album_index]
 
         # Click on the album
@@ -99,6 +142,7 @@ def download_album_photos():
         except:
             # TODO fix this which could be related to the first album failing
             print(f'FAILED TO GRAB "event_name_with_date" at album_index = {album_index}')
+            album_index += 1
             continue
 
         date_match = re.search(r'\((\w+ \d{1,2}, \d{4})\)', event_name_with_date)
@@ -115,7 +159,16 @@ def download_album_photos():
             album_name = f"{formatted_date}  {event_name_without_date}"  # e.g., "2024.09.14  Event_Name"
 
         # Click on the first photo
-        first_photo = driver.find_element(By.CSS_SELECTOR, '#submain > div > ul > li:first-child > a')
+        first_photo = None
+        try:
+            first_photo = driver.find_element(By.CSS_SELECTOR, '#submain > div > ul > li:first-child > a')
+        except:
+            print(f'FAILED TO GRAB "first_photo" at album_index = {album_index}. This could be an empty album')
+            driver.back()  # Go back to the album list
+            time.sleep(3)
+            album_index += 1
+            continue
+
         first_photo.click()
         time.sleep(3)
         
@@ -166,7 +219,6 @@ def download_album_photos():
         time.sleep(2)
         driver.back()  # Go back to the album list
         time.sleep(3)
-        print(f'album_index = {album_index}')
         album_index += 1
 
 login()
