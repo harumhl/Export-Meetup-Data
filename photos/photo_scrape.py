@@ -65,6 +65,19 @@ def login():
     # Wait for a bit to see the result (you can remove this if you don't need it)
     time.sleep(2)
 
+def check_file_exists(file_name):
+    # Get the current directory
+    current_directory = os.getcwd()
+    
+    # Construct the full path to the file
+    file_path = os.path.join(current_directory, file_name)
+    
+    # Check if the file exists
+    if os.path.isfile(file_path):
+        return True
+    else:
+        return False
+
 def download_album_photos():
     driver.get(meetup_event_url)
     
@@ -101,43 +114,47 @@ def download_album_photos():
         # Start downloading photos in the album
         photo_index = 1
         while True:
-            # Open the photo in a new tab to trigger download
-            download_button = driver.find_element(By.ID, 'download-photo')
-            download_button.click()  # This will open the photo in a new tab
-            driver.switch_to.window(driver.window_handles[1])  # Switch to the new tab
-            
-            # Wait for the photo to load
-            time.sleep(3)
-            print(album_name)
-            
             # Save the photo with album name + index
             photo_name = f"{album_name} {photo_index}.jpg"
             photo_path = os.path.join(download_dir, photo_name)
-            
-            # Get the current URL of the opened image tab
-            image_url = driver.current_url
-            
-            # Use requests to download the image file
-            response = requests.get(image_url)
-            with open(photo_path, 'wb') as file:
-                file.write(response.content)
-            
-            # Close the new tab after downloading
-            driver.close()
-            driver.switch_to.window(driver.window_handles[0])  # Return to the album tab
+
+            if not check_file_exists(photo_name):
+                # Open the photo in a new tab to trigger download
+                download_button = driver.find_element(By.ID, 'download-photo')
+                download_button.click()  # This will open the photo in a new tab
+                driver.switch_to.window(driver.window_handles[1])  # Switch to the new tab
+                
+                # Wait for the photo to load
+                time.sleep(1)
+                
+                # Get the current URL of the opened image tab
+                image_url = driver.current_url
+                
+                # Use requests to download the image file
+                response = requests.get(image_url)
+                with open(photo_path, 'wb') as file:
+                    file.write(response.content)
+                
+                # Close the new tab after downloading
+                driver.close()
+                driver.switch_to.window(driver.window_handles[0])  # Return to the album tab
             
             # Increment photo index for next photo
             photo_index += 1
             
             # Move to the next photo if available
-            next_photo_button = driver.find_element(By.CSS_SELECTOR, 'button[aria-label="Next"]')
-            if not next_photo_button.is_enabled():
-                break  # If the button is disabled, it means we've reached the last photo
+            next_photo_button = driver.find_element(By.ID, 'forward-arrow')
+            photo_counter = driver.find_element(By.CSS_SELECTOR, 
+                "#modal > div > div.w-full.rounded-none.bg-gray7.xs\\:p-0.a1a66qgy.hidden.relative.sm\\:block.bg-white.rounded-lg.shadow-lg.z-50.max-h-screen.overflow-y-auto.pl-12.pr-10.pt-9.pb-8.md\\:max-w-prose > div > div > div.flex.h-full.w-full.flex-col > div.absolute.bottom-0.flex.w-full.items-center.bg-gray7.sm\\:relative.d1o5tode > div > div:nth-child(2) > span"
+            ).text  # Get the text of the element
+            if photo_index > 2 and  photo_counter.split('/')[0] == photo_counter.split('/')[1]:
+                break  # We are at like 90/90 so the last one
             next_photo_button.click()
             time.sleep(2)  # Wait for the next photo to load
         
         # Exit the photo viewer and go back to albums
-        driver.find_element(By.CSS_SELECTOR, 'button[aria-label="Close"]').click()  # Press 'esc'
+        exit_photo_modal_button = driver.find_element(By.ID, 'close-overlay')
+        exit_photo_modal_button.click()
         time.sleep(2)
         driver.back()  # Go back to the album list
         time.sleep(3)
