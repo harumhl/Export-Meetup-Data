@@ -121,7 +121,7 @@ def download_album_photos():
     
     time.sleep(3)  # Adjust this depending on the page load time
 
-    album_index = 1 # TODO the first album at i=0 is different??? Handle that. i=12,13,14 failed too
+    album_index = 0 # TODO the first album at i=0 is different??? Handle that
     while True:
         print(f'Trying album_index = {album_index}')
 
@@ -146,7 +146,6 @@ def download_album_photos():
             print(f'FAILED TO GRAB "event_name_with_date" at album_index = {album_index}')
             album_index += 1
             continue
-
         date_match = re.search(r'\((\w+ \d{1,2}, \d{4})\)', event_name_with_date)
         album_name = event_name_with_date
         if date_match:
@@ -166,13 +165,13 @@ def download_album_photos():
             first_photo = driver.find_element(By.CSS_SELECTOR, '#submain > div > ul > li:first-child > a')
         except:
             print(f'FAILED TO GRAB "first_photo" at album_index = {album_index}. This could be an empty album')
-            driver.back()  # Go back to the album list
-            time.sleep(3)
+            driver.close()
+            driver.switch_to.window(driver.window_handles[-1])  # Return to the albums tab
             album_index += 1
             continue
 
         first_photo.click()
-        time.sleep(3)
+        time.sleep(1)
         
         # Start downloading photos in the album
         photo_index = 1
@@ -186,9 +185,6 @@ def download_album_photos():
                 download_button = driver.find_element(By.ID, 'download-photo')
                 download_button.click()  # This will open the photo in a new tab
                 driver.switch_to.window(driver.window_handles[-1])  # Switch to the new tab
-                
-                # Wait for the photo to load
-                time.sleep(1)
                 
                 # Get the current URL of the opened image tab
                 image_url = driver.current_url
@@ -213,12 +209,11 @@ def download_album_photos():
             if photo_counter == '1/1' or (photo_index > 2 and photo_counter.split('/')[0] == photo_counter.split('/')[1]):
                 break  # We are at like 90/90 so the last one
             next_photo_button.click()
-            time.sleep(2)  # Wait for the next photo to load
+            time.sleep(1)  # Wait for the next photo to load
         
         # Close the album tab and go back to the albums tab
         driver.close()
         driver.switch_to.window(driver.window_handles[-1])  # Return to the albums tab
-        time.sleep(3)
         album_index += 1
 
 login()
