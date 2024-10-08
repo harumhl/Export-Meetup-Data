@@ -126,11 +126,16 @@ def download_album_photos():
         print(f'Trying album_index = {album_index}')
 
         # Scroll to the right album
-        albums = driver.find_element(By.CSS_SELECTOR, '#submain > div > div.grid.grid-cols-1.gap-4.sm\\:grid-cols-2.lg\\:grid-cols-3').find_elements(By.XPATH, './a')
-        while album_index >= len(albums):
-            scroll()
+        try:
             albums = driver.find_element(By.CSS_SELECTOR, '#submain > div > div.grid.grid-cols-1.gap-4.sm\\:grid-cols-2.lg\\:grid-cols-3').find_elements(By.XPATH, './a')
-        album = albums[album_index]
+            while album_index >= len(albums):
+                scroll()
+                albums = driver.find_element(By.CSS_SELECTOR, '#submain > div > div.grid.grid-cols-1.gap-4.sm\\:grid-cols-2.lg\\:grid-cols-3').find_elements(By.XPATH, './a')
+            album = albums[album_index]
+        except:
+            print(f'FAILED TO GRAB "albums" at album_index = {album_index}')
+            album_index += 1
+            continue
 
         # Open the album in a new tab
         ActionChains(driver).key_down(Keys.COMMAND).click(album).key_up(Keys.COMMAND).perform() # ActionChains(driver).key_down(Keys.CONTROL).click(link).key_up(Keys.CONTROL).perform() # for Windows
@@ -191,8 +196,13 @@ def download_album_photos():
                 
                 # Use requests to download the image file
                 response = requests.get(image_url)
-                with open(photo_path, 'wb') as file:
-                    file.write(response.content)
+                for _ in range(3):
+                    try:
+                        with open(photo_path, 'wb') as file:
+                            file.write(response.content)
+                    except:
+                        continue
+                    break
                 
                 # Close the new tab after downloading
                 driver.close()

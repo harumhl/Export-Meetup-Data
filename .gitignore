@@ -1,3 +1,5 @@
 **/events.json
 **/.env
 **/*.jpg
+**/*.jpeg
+**/.DS_Store

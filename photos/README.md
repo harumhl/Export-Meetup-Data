@@ -1,3 +1,8 @@
+This code is hardly robust as Meetup.com presents different photo albums differently.
+I didn't want to implement to handle all those cases neatly, so I temporarily altered the code without committing those here.
+Please be aware if you decides to use my code.
+In a happy case, this should download 80+% of all meetup photos.
+
 # How to Use
 
 1. Run `pip install -r requirements.txt`
